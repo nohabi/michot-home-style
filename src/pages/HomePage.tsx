@@ -19,9 +19,13 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-primary text-primary-foreground section-padding relative overflow-hidden">
-        <div className="container-custom relative z-10">
-          <div className="max-w-2xl">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <img src={heroImage} alt="Michot Furniture showroom" className="w-full h-full object-cover" width={1920} height={1080} />
+          <div className="absolute inset-0 bg-gradient-to-r from-foreground/85 via-foreground/60 to-transparent" />
+        </div>
+        <div className="container-custom relative z-10 section-padding">
+          <div className="max-w-2xl text-primary-foreground">
             <p className="text-accent font-medium text-sm uppercase tracking-widest mb-4">
               Handcrafted in Ethiopia
             </p>
@@ -41,10 +45,6 @@ export default function HomePage() {
               </Button>
             </div>
           </div>
-        </div>
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-10 right-10 w-96 h-96 bg-accent rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-40 w-64 h-64 bg-primary-foreground rounded-full blur-3xl" />
         </div>
       </section>
 
