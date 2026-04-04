@@ -4,7 +4,6 @@ import ProductCard from "@/components/ProductCard";
 import { products, categories } from "@/lib/products";
 import { ArrowRight, Truck, Shield, Headphones, Building2 } from "lucide-react";
 import heroImage from "@/assets/hero-living.jpg";
-import { ArrowRight, Truck, Shield, Headphones, Building2 } from "lucide-react";
 
 const featuredProducts = products.filter((p) => p.featured).slice(0, 4);
 const bestSellers = products.filter((p) => p.bestSeller).slice(0, 4);
