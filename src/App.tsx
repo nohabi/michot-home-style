@@ -43,6 +43,7 @@ const App = () => (
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/account" element={<AccountPage />} />
+                    <Route path="/admin" element={<AdminPage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
