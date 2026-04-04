@@ -1,17 +1,33 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import ProductCard from "@/components/ProductCard";
-import { products, categories, materials, usageTypes } from "@/lib/products";
+import { useProducts } from "@/hooks/use-products";
+import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+
+const categories = [
+  "Sofas & Couches",
+  "Beds & Mattresses",
+  "Dining Tables",
+  "Chairs",
+  "Office Furniture",
+  "Decor & Accessories",
+];
+
+const materials = ["Solid Wood", "Engineered Wood", "Metal", "Leather", "Fabric", "Glass"];
+const usageTypes = ["Home", "Hotel", "Restaurant", "Office"];
 
 type SortOption = "default" | "price-asc" | "price-desc" | "rating" | "name";
 
 export default function ShopPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") || "";
+  const { t } = useTranslation();
+  const { data: products, isLoading } = useProducts();
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(initialCategory);
@@ -21,6 +37,7 @@ export default function ShopPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const filtered = useMemo(() => {
+    if (!products) return [];
     let result = products;
 
     if (search) {
@@ -40,7 +57,7 @@ export default function ShopPage() {
       case "name": return [...result].sort((a, b) => a.name.localeCompare(b.name));
       default: return result;
     }
-  }, [search, category, material, usage, sort]);
+  }, [search, category, material, usage, sort, products]);
 
   const clearFilters = () => {
     setSearch("");
@@ -57,18 +74,17 @@ export default function ShopPage() {
     <div className="section-padding">
       <div className="container-custom">
         <div className="mb-8">
-          <h1 className="font-heading text-3xl font-bold">Shop All Furniture</h1>
+          <h1 className="font-heading text-3xl font-bold">{t("shopAllFurniture")}</h1>
           <p className="text-muted-foreground mt-2">
-            {filtered.length} product{filtered.length !== 1 ? "s" : ""}
+            {filtered.length} {t("products")}
           </p>
         </div>
 
-        {/* Search and sort bar */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search furniture..."
+              placeholder={t("searchFurniture")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -77,27 +93,26 @@ export default function ShopPage() {
           <div className="flex gap-3">
             <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="Sort by" />
+                <SelectValue placeholder={t("sortBy")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">Default</SelectItem>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Top Rated</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="default">{t("default")}</SelectItem>
+                <SelectItem value="price-asc">{t("priceLowToHigh")}</SelectItem>
+                <SelectItem value="price-desc">{t("priceHighToLow")}</SelectItem>
+                <SelectItem value="rating">{t("topRated")}</SelectItem>
+                <SelectItem value="name">{t("name")}</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" className="lg:hidden" onClick={() => setShowFilters(!showFilters)}>
-              <SlidersHorizontal className="w-4 h-4 mr-2" /> Filters
+              <SlidersHorizontal className="w-4 h-4 mr-2" /> {t("filters")}
             </Button>
           </div>
         </div>
 
         <div className="flex gap-8">
-          {/* Sidebar Filters */}
           <aside className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-56 shrink-0 space-y-6 ${showFilters ? 'mb-6 lg:mb-0' : ''}`}>
             <div>
-              <h3 className="font-medium text-sm mb-3">Category</h3>
+              <h3 className="font-medium text-sm mb-3">{t("category")}</h3>
               <div className="space-y-2">
                 {categories.map((c) => (
                   <button
@@ -113,7 +128,7 @@ export default function ShopPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-medium text-sm mb-3">Material</h3>
+              <h3 className="font-medium text-sm mb-3">{t("material")}</h3>
               <div className="space-y-2">
                 {materials.map((m) => (
                   <button
@@ -129,7 +144,7 @@ export default function ShopPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-medium text-sm mb-3">Usage</h3>
+              <h3 className="font-medium text-sm mb-3">{t("usage")}</h3>
               <div className="space-y-2">
                 {usageTypes.map((u) => (
                   <button
@@ -147,17 +162,30 @@ export default function ShopPage() {
 
             {hasFilters && (
               <Button variant="ghost" size="sm" className="w-full" onClick={clearFilters}>
-                <X className="w-3 h-3 mr-2" /> Clear Filters
+                <X className="w-3 h-3 mr-2" /> {t("clearFilters")}
               </Button>
             )}
           </aside>
 
-          {/* Product Grid */}
           <div className="flex-1">
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-lg border border-border overflow-hidden">
+                    <Skeleton className="aspect-[4/3]" />
+                    <div className="p-4 space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-6 w-24" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-muted-foreground text-lg">No products found</p>
-                <Button variant="outline" className="mt-4" onClick={clearFilters}>Clear Filters</Button>
+                <p className="text-muted-foreground text-lg">{t("noProductsFound")}</p>
+                <Button variant="outline" className="mt-4" onClick={clearFilters}>{t("clearFilters")}</Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">

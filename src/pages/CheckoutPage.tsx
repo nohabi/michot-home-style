@@ -1,5 +1,8 @@
 import { useCart } from "@/lib/cart";
-import { formatPrice } from "@/lib/products";
+import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/i18n";
+import { formatPrice } from "@/hooks/use-products";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,7 +13,7 @@ import { toast } from "sonner";
 
 const deliveryZones = [
   { name: "Tulu Dimtu (Local)", cost: 0, minOrder: 20000 },
-  { name: "Tulu Dimtu (Local)", cost: 500, minOrder: 0 },
+  { name: "Tulu Dimtu (Local - Standard)", cost: 500, minOrder: 0 },
   { name: "Akaki Kality", cost: 800, minOrder: 0 },
   { name: "Bole", cost: 1200, minOrder: 0 },
   { name: "Kirkos / Lideta", cost: 1500, minOrder: 0 },
@@ -21,8 +24,18 @@ const deliveryZones = [
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
+  const { user } = useAuth();
+  const { t } = useTranslation();
   const [zone, setZone] = useState("");
   const [ordered, setOrdered] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    notes: "",
+  });
 
   const selectedZone = deliveryZones.find((z) => z.name === zone);
   const deliveryCost = selectedZone
@@ -32,12 +45,56 @@ export default function CheckoutPage() {
     : 0;
   const grandTotal = totalPrice + deliveryCost;
 
-  const handleOrder = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleOrder = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (items.length === 0) return;
-    setOrdered(true);
-    clearCart();
-    toast.success("Order placed successfully!");
+    if (items.length === 0 || !zone) return;
+    setLoading(true);
+
+    try {
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          user_id: user?.id || null,
+          delivery_zone: zone,
+          delivery_address: formData.address,
+          delivery_cost: deliveryCost,
+          subtotal: totalPrice,
+          total: grandTotal,
+          customer_name: formData.name,
+          customer_phone: formData.phone,
+          customer_email: formData.email || null,
+          notes: formData.notes || null,
+        })
+        .select("id")
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map((item) => ({
+        order_id: order.id,
+        product_id: item.product.id,
+        product_name: item.product.name,
+        quantity: item.quantity,
+        unit_price: item.product.price,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      setOrdered(true);
+      clearCart();
+      toast.success(t("orderConfirmed"));
+    } catch (error) {
+      console.error("Order failed:", error);
+      toast.error("Failed to place order. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (ordered) {
@@ -45,12 +102,10 @@ export default function CheckoutPage() {
       <div className="section-padding text-center">
         <div className="container-custom max-w-md">
           <CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-6" />
-          <h1 className="font-heading text-3xl font-bold mb-4">Order Confirmed!</h1>
-          <p className="text-muted-foreground mb-8">
-            Thank you for your order. We'll contact you to confirm delivery details.
-          </p>
+          <h1 className="font-heading text-3xl font-bold mb-4">{t("orderConfirmed")}</h1>
+          <p className="text-muted-foreground mb-8">{t("orderConfirmedDesc")}</p>
           <Button asChild>
-            <Link to="/shop">Continue Shopping</Link>
+            <Link to="/shop">{t("continueShopping")}</Link>
           </Button>
         </div>
       </div>
@@ -61,8 +116,8 @@ export default function CheckoutPage() {
     return (
       <div className="section-padding text-center">
         <div className="container-custom">
-          <h1 className="font-heading text-2xl font-bold mb-4">Your cart is empty</h1>
-          <Button asChild><Link to="/shop">Browse Products</Link></Button>
+          <h1 className="font-heading text-2xl font-bold mb-4">{t("yourCartEmpty")}</h1>
+          <Button asChild><Link to="/shop">{t("browseProducts")}</Link></Button>
         </div>
       </div>
     );
@@ -72,68 +127,64 @@ export default function CheckoutPage() {
     <div className="section-padding">
       <div className="container-custom max-w-4xl">
         <Link to="/shop" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
-          <ArrowLeft className="w-4 h-4" /> Continue Shopping
+          <ArrowLeft className="w-4 h-4" /> {t("continueShopping")}
         </Link>
 
-        <h1 className="font-heading text-3xl font-bold mb-8">Checkout</h1>
+        <h1 className="font-heading text-3xl font-bold mb-8">{t("checkout")}</h1>
 
         <form onSubmit={handleOrder}>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-            {/* Form */}
             <div className="lg:col-span-3 space-y-6">
               <div>
-                <h2 className="font-heading text-lg font-semibold mb-4">Contact Information</h2>
+                <h2 className="font-heading text-lg font-semibold mb-4">{t("contactInformation")}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Full Name *</label>
-                    <Input required placeholder="Your name" />
+                    <label className="text-sm font-medium mb-2 block">{t("fullName")} *</label>
+                    <Input required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder={t("fullName")} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Phone *</label>
-                    <Input required type="tel" placeholder="+251..." />
+                    <label className="text-sm font-medium mb-2 block">{t("phone")} *</label>
+                    <Input required type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+251..." />
                   </div>
                 </div>
                 <div className="mt-4">
-                  <label className="text-sm font-medium mb-2 block">Email</label>
-                  <Input type="email" placeholder="your@email.com" />
+                  <label className="text-sm font-medium mb-2 block">{t("email")}</label>
+                  <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder={t("yourEmail")} />
                 </div>
               </div>
 
               <div>
-                <h2 className="font-heading text-lg font-semibold mb-4">Delivery</h2>
+                <h2 className="font-heading text-lg font-semibold mb-4">{t("delivery")}</h2>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Delivery Zone *</label>
+                  <label className="text-sm font-medium mb-2 block">{t("deliveryZone")} *</label>
                   <Select required value={zone} onValueChange={setZone}>
-                    <SelectTrigger><SelectValue placeholder="Select your area" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("selectArea")} /></SelectTrigger>
                     <SelectContent>
-                      {[...new Set(deliveryZones.map((z) => z.name))].map((name) => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      {deliveryZones.map((z) => (
+                        <SelectItem key={z.name} value={z.name}>{z.name} — {z.cost === 0 && z.minOrder > 0 ? t("free") + ` (over ${formatPrice(z.minOrder)})` : formatPrice(z.cost)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="mt-4">
-                  <label className="text-sm font-medium mb-2 block">Delivery Address *</label>
-                  <Input required placeholder="Street address or landmark" />
+                  <label className="text-sm font-medium mb-2 block">{t("deliveryAddress")} *</label>
+                  <Input required value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder={t("streetAddress")} />
                 </div>
                 <div className="mt-4">
-                  <label className="text-sm font-medium mb-2 block">Notes</label>
-                  <Input placeholder="Additional delivery instructions" />
+                  <label className="text-sm font-medium mb-2 block">{t("notes")}</label>
+                  <Input value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder={t("additionalInstructions")} />
                 </div>
               </div>
 
               <div>
-                <h2 className="font-heading text-lg font-semibold mb-4">Payment</h2>
-                <p className="text-sm text-muted-foreground bg-muted rounded-md p-4">
-                  💰 Payment is collected upon delivery (Cash on Delivery). Our team will contact you to confirm your order.
-                </p>
+                <h2 className="font-heading text-lg font-semibold mb-4">{t("payment")}</h2>
+                <p className="text-sm text-muted-foreground bg-muted rounded-md p-4">{t("paymentNote")}</p>
               </div>
             </div>
 
-            {/* Order summary */}
             <div className="lg:col-span-2">
               <div className="bg-card border border-border rounded-lg p-6 sticky top-24">
-                <h2 className="font-heading text-lg font-semibold mb-4">Order Summary</h2>
+                <h2 className="font-heading text-lg font-semibold mb-4">{t("orderSummary")}</h2>
                 <div className="space-y-3 mb-4">
                   {items.map((item) => (
                     <div key={item.product.id} className="flex justify-between text-sm">
@@ -144,19 +195,21 @@ export default function CheckoutPage() {
                 </div>
                 <div className="border-t border-border pt-3 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-muted-foreground">{t("subtotal")}</span>
                     <span>{formatPrice(totalPrice)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Delivery</span>
-                    <span>{deliveryCost === 0 ? "Free" : formatPrice(deliveryCost)}</span>
+                    <span className="text-muted-foreground">{t("delivery")}</span>
+                    <span>{deliveryCost === 0 ? t("free") : formatPrice(deliveryCost)}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-lg border-t border-border pt-3 mt-3">
-                    <span>Total</span>
+                    <span>{t("total")}</span>
                     <span className="text-accent">{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
-                <Button type="submit" size="lg" className="w-full mt-6">Place Order</Button>
+                <Button type="submit" size="lg" className="w-full mt-6" disabled={loading}>
+                  {loading ? "..." : t("placeOrder")}
+                </Button>
               </div>
             </div>
           </div>
