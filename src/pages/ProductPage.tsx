@@ -94,12 +94,15 @@ export default function ProductPage() {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div className="aspect-square bg-secondary rounded-lg flex items-center justify-center">
-            {product.images.length > 0 ? (
-              <img src={product.images[0]} alt={name} className="w-full h-full object-cover rounded-lg" />
-            ) : (
-              <span className="text-muted-foreground font-heading text-2xl">{product.category}</span>
-            )}
+          <div className="aspect-square bg-secondary rounded-lg flex items-center justify-center overflow-hidden">
+            {(() => {
+              const imgSrc = getProductImage(product.name, product.images);
+              return imgSrc ? (
+                <img src={imgSrc} alt={name} className="w-full h-full object-cover rounded-lg" width={800} height={800} />
+              ) : (
+                <span className="text-muted-foreground font-heading text-2xl">{product.category}</span>
+              );
+            })()}
           </div>
 
           <div>

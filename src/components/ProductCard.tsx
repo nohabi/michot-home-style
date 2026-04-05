@@ -44,11 +44,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     <div className="group bg-card rounded-lg border border-border overflow-hidden transition-all hover:shadow-lg">
       <Link to={`/product/${product.id}`} className="block">
         <div className="aspect-[4/3] bg-secondary flex items-center justify-center relative overflow-hidden">
-          {product.images.length > 0 ? (
-            <img src={product.images[0]} alt={name} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-muted-foreground font-heading text-lg">{product.category}</span>
-          )}
+          {(() => {
+            const imgSrc = getProductImage(product.name, product.images);
+            return imgSrc ? (
+              <img src={imgSrc} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" width={800} height={800} />
+            ) : (
+              <span className="text-muted-foreground font-heading text-lg">{product.category}</span>
+            );
+          })()}
           {product.original_price && (
             <span className="absolute top-3 left-3 bg-destructive text-destructive-foreground text-xs font-semibold px-2 py-1 rounded">
               -{Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
