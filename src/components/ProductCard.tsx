@@ -6,6 +6,7 @@ import { useCart } from "@/lib/cart";
 import { useTranslation } from "@/lib/i18n";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { useAuth } from "@/lib/auth";
+import { getProductImage } from "@/lib/product-images";
 import { ShoppingCart, Star, Heart } from "lucide-react";
 
 interface ProductCardProps {
