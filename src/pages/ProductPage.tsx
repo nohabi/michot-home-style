@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { getProductImage } from "@/lib/product-images";
 import { useProduct, useProducts, formatPrice } from "@/hooks/use-products";
 import { useCart } from "@/lib/cart";
 import { useTranslation } from "@/lib/i18n";
