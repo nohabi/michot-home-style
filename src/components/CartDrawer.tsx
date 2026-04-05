@@ -29,8 +29,15 @@ export default function CartDrawer() {
             <div className="flex-1 overflow-y-auto space-y-4 py-4">
               {items.map((item) => (
                 <div key={item.product.id} className="flex gap-4 p-3 bg-muted rounded-lg">
-                  <div className="w-20 h-20 bg-secondary rounded-md flex items-center justify-center">
-                    <ShoppingBag className="w-8 h-8 text-muted-foreground" />
+                  <div className="w-20 h-20 bg-secondary rounded-md flex items-center justify-center overflow-hidden">
+                    {(() => {
+                      const imgSrc = getProductImage(item.product.name, item.product.images);
+                      return imgSrc ? (
+                        <img src={imgSrc} alt={item.product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ShoppingBag className="w-8 h-8 text-muted-foreground" />
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium truncate">{item.product.name}</h4>
